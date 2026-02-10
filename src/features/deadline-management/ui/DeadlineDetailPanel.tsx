@@ -9,15 +9,14 @@ import {
   CheckCircle,
   Edit,
   Trash2,
-  FileText,
   Repeat,
 } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
-import { Progress } from "@/shared/components/ui/progress";
 import { Separator } from "@/shared/components/ui/separator";
 import { cn } from "@/shared/lib/utils";
 import { DDayBadge } from "./DDayBadge";
+import { ChecklistWidget } from "@/features/document-management";
 import type { Deadline } from "@/shared/types";
 import { useCompleteDeadline, useDeleteDeadline } from "../hooks/useDeadlines";
 import { toast } from "sonner";
@@ -98,24 +97,10 @@ export function DeadlineDetailPanel({
 
   if (!isOpen || !deadline) return null;
 
-  // Mock checklist data - 실제로는 API에서 가져옴
-  const checklist = {
-    items: [
-      { id: "1", title: "급여대장 확인", isCompleted: true, isRequired: true },
-      { id: "2", title: "원천징수영수증 작성", isCompleted: true, isRequired: true },
-      { id: "3", title: "전자신고", isCompleted: false, isRequired: true },
-      { id: "4", title: "납부", isCompleted: false, isRequired: true },
-    ],
-    completionRate: 50,
-  };
-
   return (
     <div className="fixed inset-y-0 right-0 z-50 flex">
       {/* Backdrop */}
-      <div
-        className="flex-1 bg-black/30"
-        onClick={onClose}
-      />
+      <div className="flex-1 bg-black/30" onClick={onClose} />
 
       {/* Panel */}
       <div className="w-96 overflow-y-auto bg-white shadow-xl">
@@ -211,47 +196,8 @@ export function DeadlineDetailPanel({
 
           <Separator className="my-6" />
 
-          {/* Checklist */}
-          <div className="mb-6">
-            <div className="mb-3 flex items-center justify-between">
-              <h4 className="flex items-center gap-2 font-medium text-gray-9">
-                <FileText className="h-4 w-4" />
-                체크리스트
-              </h4>
-              <span className="text-sm text-gray-5">
-                {checklist.completionRate}% 완료
-              </span>
-            </div>
-            <Progress value={checklist.completionRate} className="mb-3 h-2" />
-            <div className="space-y-2">
-              {checklist.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-2 rounded-lg border border-gray-2 p-2"
-                >
-                  <input
-                    type="checkbox"
-                    checked={item.isCompleted}
-                    readOnly
-                    className="h-4 w-4 rounded border-gray-3"
-                  />
-                  <span
-                    className={cn(
-                      "flex-1 text-sm",
-                      item.isCompleted && "text-gray-5 line-through"
-                    )}
-                  >
-                    {item.title}
-                  </span>
-                  {item.isRequired && (
-                    <Badge variant="outline" className="text-xs">
-                      필수
-                    </Badge>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Checklist Widget */}
+          <ChecklistWidget deadlineId={Number(deadline.id)} className="mb-6" />
 
           <Separator className="my-6" />
 

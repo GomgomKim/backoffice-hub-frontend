@@ -95,6 +95,12 @@ export interface DocumentChecklist {
   updatedAt: string;
 }
 
+export interface DocumentStats {
+  total: number;
+  byStatus: Record<string, number>;
+  byCategory: Record<string, number>;
+}
+
 // Notification Types
 export type NotificationPriority = "urgent" | "high" | "normal" | "low";
 export type NotificationType = "deadline" | "document" | "system" | "integration";
