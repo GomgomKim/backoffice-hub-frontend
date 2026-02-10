@@ -110,12 +110,14 @@ export interface Notification {
   type: NotificationType;
   priority: NotificationPriority;
   title: string;
-  message: string;
+  message?: string;
   isRead: boolean;
   userId: string;
   relatedId?: string;
   relatedType?: string;
+  actionUrl?: string;
   createdAt: string;
+  readAt?: string;
 }
 
 // Dashboard Types

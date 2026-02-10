@@ -5,6 +5,7 @@ import { cn } from "@/shared/lib/utils";
 import { useAppStore } from "@/shared/store/appStore";
 import { Sidebar } from "@/shared/components/navigation/Sidebar";
 import { GlobalHeader } from "@/shared/components/layout/GlobalHeader";
+import { NotificationCenter } from "@/features/notifications";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -32,6 +33,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           </main>
         </div>
       </div>
+      {/* Notification Panel */}
+      <NotificationCenter />
     </div>
   );
 }

@@ -7,14 +7,16 @@ import { Button } from "@/shared/components/ui/button";
 import { useHeader } from "@/shared/context/HeaderContext";
 import { useAppStore } from "@/shared/store/appStore";
 import { Badge } from "@/shared/components/ui/badge";
+import { useUnreadCount } from "@/features/notifications";
 
 export function GlobalHeader() {
   const { title, subtitle, actions } = useHeader();
   const { user, isLoaded } = useUser();
   const { toggleNotificationPanel } = useAppStore();
 
-  // TODO: Replace with actual unread count from API
-  const unreadCount = 3;
+  // Fetch unread notification count from API
+  const { data: unreadData } = useUnreadCount();
+  const unreadCount = unreadData?.count ?? 0;
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-3 bg-white px-6">
