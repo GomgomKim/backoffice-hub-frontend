@@ -1,7 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Building2, Users, Link2, Bell, Shield } from "lucide-react";
+import {
+  Building2,
+  Users,
+  Link2,
+  Bell,
+  Shield,
+  RefreshCw,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  CreditCard,
+  FileText,
+  Building,
+  MessageSquare,
+} from "lucide-react";
 import { useHeader } from "@/shared/context/HeaderContext";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -14,6 +28,13 @@ import {
 import { Badge } from "@/shared/components/ui/badge";
 import { Separator } from "@/shared/components/ui/separator";
 import { cn } from "@/shared/lib/utils";
+import {
+  useIntegrationStatuses,
+  useTestConnection,
+  useSyncIntegration,
+  INTEGRATION_INFO,
+  type IntegrationSystemType,
+} from "@/features/integrations";
 
 type SettingsTab = "company" | "team" | "integrations" | "notifications" | "security";
 
@@ -25,16 +46,23 @@ const tabs = [
   { id: "security" as const, label: "보안", icon: Shield },
 ];
 
-const integrations = [
-  { id: "hyeum", name: "혜움", description: "급여/4대보험 관리", connected: true },
-  { id: "bizplay", name: "비즈플레이", description: "법인카드/지출 관리", connected: false },
-  { id: "hometax", name: "홈택스", description: "세무신고 연동", connected: true },
-  { id: "bank", name: "은행 연동", description: "계좌/거래내역 조회", connected: false },
-];
+const INTEGRATION_ICONS: Record<IntegrationSystemType, React.ComponentType<{ className?: string }>> = {
+  hyeum: Users,
+  bizplay: CreditCard,
+  hometax: FileText,
+  bank: Building,
+  slack: MessageSquare,
+};
 
 export function SettingsView() {
   const { setHeader } = useHeader();
   const [activeTab, setActiveTab] = useState<SettingsTab>("company");
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [testingId, setTestingId] = useState<string | null>(null);
+
+  const { data: statuses, isLoading: isLoadingStatuses, refetch: refetchStatuses } = useIntegrationStatuses();
+  const testConnection = useTestConnection();
+  const syncIntegration = useSyncIntegration();
 
   useEffect(() => {
     setHeader({
@@ -42,6 +70,26 @@ export function SettingsView() {
       subtitle: "시스템 설정을 관리하세요",
     });
   }, [setHeader]);
+
+  const handleTestConnection = async (systemType: IntegrationSystemType) => {
+    setTestingId(systemType);
+    try {
+      await testConnection.mutateAsync(systemType);
+      await refetchStatuses();
+    } finally {
+      setTestingId(null);
+    }
+  };
+
+  const handleSync = async (systemType: IntegrationSystemType) => {
+    setSyncingId(systemType);
+    try {
+      await syncIntegration.mutateAsync(systemType);
+      await refetchStatuses();
+    } finally {
+      setSyncingId(null);
+    }
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -87,41 +135,123 @@ export function SettingsView() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {integrations.map((integration) => (
-                  <div
-                    key={integration.id}
-                    className="flex items-center justify-between rounded-lg border border-gray-3 p-4"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-2">
-                        <Link2 className="h-6 w-6 text-gray-6" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-9">
-                          {integration.name}
-                        </p>
-                        <p className="text-sm text-gray-5">
-                          {integration.description}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant={integration.connected ? "success" : "outline"}
+              {isLoadingStatuses ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-gray-5" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.values(INTEGRATION_INFO).map((info) => {
+                    const status = statuses?.find((s) => s.systemType === info.systemType);
+                    const Icon = INTEGRATION_ICONS[info.systemType];
+                    const isSyncing = syncingId === info.systemType;
+                    const isTesting = testingId === info.systemType;
+                    const isConnected = status?.isConnected ?? false;
+                    const isActive = status?.isActive ?? false;
+
+                    return (
+                      <div
+                        key={info.systemType}
+                        className="rounded-lg border border-gray-3 p-4"
                       >
-                        {integration.connected ? "연결됨" : "미연결"}
-                      </Badge>
-                      <Button
-                        variant={integration.connected ? "outline" : "default"}
-                        size="sm"
-                      >
-                        {integration.connected ? "설정" : "연결"}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-2">
+                              <Icon className="h-6 w-6 text-gray-6" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-gray-9">
+                                  {info.name}
+                                </p>
+                                {isConnected && isActive && (
+                                  <CheckCircle2 className="h-4 w-4 text-status-safe" />
+                                )}
+                                {isConnected && !isActive && (
+                                  <XCircle className="h-4 w-4 text-status-warning" />
+                                )}
+                              </div>
+                              <p className="text-sm text-gray-5">
+                                {info.description}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge
+                              variant={isConnected ? (isActive ? "success" : "warning") : "outline"}
+                            >
+                              {isConnected ? (isActive ? "연결됨" : "비활성") : "미연결"}
+                            </Badge>
+                            {isConnected && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSync(info.systemType)}
+                                disabled={isSyncing || !isActive}
+                              >
+                                {isSyncing ? (
+                                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="mr-1.5 h-4 w-4" />
+                                )}
+                                동기화
+                              </Button>
+                            )}
+                            <Button
+                              variant={isConnected ? "outline" : "default"}
+                              size="sm"
+                              onClick={() => handleTestConnection(info.systemType)}
+                              disabled={isTesting}
+                            >
+                              {isTesting ? (
+                                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                              ) : null}
+                              {isConnected ? "설정" : "연결"}
+                            </Button>
+                          </div>
+                        </div>
+
+                        {/* Features */}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {info.features.map((feature, idx) => (
+                            <Badge key={idx} variant="secondary" className="text-xs">
+                              {feature}
+                            </Badge>
+                          ))}
+                        </div>
+
+                        {/* Last sync info */}
+                        {status?.lastSyncAt && (
+                          <div className="mt-3 flex items-center gap-2 text-xs text-gray-5">
+                            <span>
+                              마지막 동기화:{" "}
+                              {new Date(status.lastSyncAt).toLocaleString("ko-KR")}
+                            </span>
+                            {status.lastSyncStatus && (
+                              <Badge
+                                variant={
+                                  status.lastSyncStatus === "success"
+                                    ? "success"
+                                    : status.lastSyncStatus === "failed"
+                                    ? "destructive"
+                                    : "warning"
+                                }
+                                className="text-xs"
+                              >
+                                {status.lastSyncStatus === "success"
+                                  ? "성공"
+                                  : status.lastSyncStatus === "failed"
+                                  ? "실패"
+                                  : "부분 성공"}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         );
